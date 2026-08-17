@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Background -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#1A1400" />
+            <corners android:radius="16dp" />
+        </shape>
+    </item>
+
+    <!-- Left half: station name -->
+    <item
+        android:left="0dp"
+        android:right="50dp"
+        android:top="0dp"
+        android:bottom="0dp">
+        <layer-list>
+            <item android:gravity="center">
+                <shape android:shape="rectangle">
+                    <solid android:color="#00000000" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+
+    <!-- Vertical divider -->
+    <item
+        android:left="95dp"
+        android:right="95dp"
+        android:top="8dp"
+        android:bottom="8dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#2A2200" />
+        </shape>
+    </item>
+
+    <!-- Right half: UV index colour box -->
+    <item
+        android:left="105dp"
+        android:right="12dp"
+        android:top="12dp"
+        android:bottom="12dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#420C13" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+
+</layer-list>

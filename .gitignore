@@ -1,0 +1,21 @@
+# Build outputs
+**/build/
+
+# Gradle caches and wrapper binaries
+gradle/wrapper/dists/
+gradle/wrapper/gradle-wrapper.jar
+.gradle/
+
+# IDE
+.idea/
+*.iml
+
+# Kotlin/JVM artifacts
+.kotlin/
+*.hprof
+
+# Secrets — never commit
+keystore.properties
+*.jks
+local.properties
+app/google-services.json

@@ -1,0 +1,182 @@
+package com.uvaustralia.app.ui.main
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
+import com.uvaustralia.app.domain.PROTECTION_THRESHOLD
+import com.uvaustralia.app.ui.theme.UvDarkBox11
+import com.uvaustralia.app.ui.theme.UvDarkBox6
+import com.uvaustralia.app.ui.theme.UvDarkBox8
+import com.uvaustralia.app.ui.theme.UvDarkBoxEx
+import com.uvaustralia.app.ui.theme.UvDarkText11
+import com.uvaustralia.app.ui.theme.UvDarkText6
+import com.uvaustralia.app.ui.theme.UvDarkText8
+import com.uvaustralia.app.ui.theme.UvDarkTextEx
+import com.uvaustralia.app.ui.theme.UvLightBox11
+import com.uvaustralia.app.ui.theme.UvLightBox6
+import com.uvaustralia.app.ui.theme.UvLightBox8
+import com.uvaustralia.app.ui.theme.UvLightBoxEx
+import com.uvaustralia.app.ui.theme.UvLightText11
+import com.uvaustralia.app.ui.theme.UvLightText6
+import com.uvaustralia.app.ui.theme.UvLightText8
+import com.uvaustralia.app.ui.theme.UvLightTextEx
+import com.uvaustralia.app.ui.theme.WarningColor
+
+// Height reserved for the "Sun protection recommended" line so sibling
+// composables can sit beneath it at a stable position regardless of visibility.
+val ProtectionWarningSlotHeight = 28.dp
+
+@Composable
+fun UvIndexDisplay(
+    uvIndex: Double?,
+    isError: Boolean,
+    stationStatus: String,
+    forceProtectionWarning: Boolean = false,
+    modifier: Modifier = Modifier,
+) {
+    val showProtectionWarning = forceProtectionWarning ||
+        (uvIndex != null && uvIndex >= PROTECTION_THRESHOLD && stationStatus != "NA" && !isError)
+    val currentUvColors = uvIndex?.let { uvColors(it) }
+
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        AnimatedContent(
+            targetState = uvIndex,
+            transitionSpec = { fadeIn() togetherWith fadeOut() },
+            label = "UV index",
+        ) { index ->
+            when {
+                isError || stationStatus == "NA" -> {
+                    Text(
+                        text = "—",
+                        style = MaterialTheme.typography.displayMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                index == null -> {
+                    Text(
+                        text = "—",
+                        style = MaterialTheme.typography.displayMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                else -> {
+                    val uvColors = uvColors(index)  // animated; currentUvColors used for warning
+                    val numberStyle = MaterialTheme.typography.displayMedium.copy(fontSize = 80.sp)
+                    val labelStyle  = MaterialTheme.typography.bodyMedium
+                    val labelColor  = uvColors.text.copy(alpha = 0.5f)
+                    val boxWidthDp  = 160.dp
+                    SubcomposeLayout(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(uvColors.box),
+                    ) { _ ->
+                        val boxWidthPx = boxWidthDp.roundToPx()
+                        val widthConstraints = Constraints(minWidth = boxWidthPx, maxWidth = boxWidthPx)
+
+                        val numberPlaceable = subcompose("number") {
+                            Text(
+                                text = formatUv(index),
+                                style = numberStyle,
+                                color = uvColors.text,
+                                textAlign = TextAlign.Center,
+                            )
+                        }[0].measure(widthConstraints)
+
+                        val boxHeight  = numberPlaceable.height
+                        val shiftUpPx  = (boxHeight * 0.045f).roundToInt()
+
+                        val labelPlaceable = subcompose("label") {
+                            Text(
+                                text = "UV Index",
+                                style = labelStyle,
+                                color = labelColor,
+                                textAlign = TextAlign.Center,
+                            )
+                        }[0].measure(widthConstraints)
+
+                        // Midpoint between baseline (~75% of box) and bottom (100%)
+                        val labelCentreY = (boxHeight * 0.875f).roundToInt()
+                        val labelY = labelCentreY - labelPlaceable.height / 2
+
+                        layout(boxWidthPx, boxHeight) {
+                            numberPlaceable.placeRelative(0, -shiftUpPx)
+                            labelPlaceable.placeRelative(0, labelY)
+                        }
+                    }
+                }
+            }
+        }
+
+        if (stationStatus == "NA") {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Station offline",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        // Fixed-height slot: always reserves space for the warning line so
+        // anything placed below UvIndexDisplay stays at a stable position.
+        Box(Modifier.height(ProtectionWarningSlotHeight), contentAlignment = Alignment.Center) {
+            if (showProtectionWarning) {
+                Text(
+                    text = "⚠ Protection needed now ⚠",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = currentUvColors?.text ?: WarningColor,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+    }
+}
+
+private fun formatUv(uv: Double): String {
+    return if (uv == uv.toLong().toDouble()) uv.toLong().toString()
+    else "%.1f".format(uv)
+}
+
+private data class UvColors(val text: androidx.compose.ui.graphics.Color, val box: androidx.compose.ui.graphics.Color)
+
+@Composable
+private fun uvColors(uv: Double): UvColors {
+    val dark = isSystemInDarkTheme()
+    return when {
+        uv < 3  -> UvColors(
+            text = MaterialTheme.colorScheme.onSurface,
+            box  = MaterialTheme.colorScheme.surface,
+        )
+        uv < 6  -> if (dark) UvColors(UvDarkText6,  UvDarkBox6)  else UvColors(UvLightText6,  UvLightBox6)
+        uv < 8  -> if (dark) UvColors(UvDarkText8,  UvDarkBox8)  else UvColors(UvLightText8,  UvLightBox8)
+        uv < 11 -> if (dark) UvColors(UvDarkText11, UvDarkBox11) else UvColors(UvLightText11, UvLightBox11)
+        else    -> if (dark) UvColors(UvDarkTextEx, UvDarkBoxEx) else UvColors(UvLightTextEx, UvLightBoxEx)
+    }
+}

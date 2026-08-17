@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!--
+        Background layer from SVG: radialGradient99
+        SVG: centre (67.73, 67.73), r=67.73, fill entire 135.47×135.47 canvas.
+        Mapped to 108×108 viewport (scale = 108/135.46666 = 0.79726).
+        Gradient stop 1: #FFEA99 at offset 0.381
+        Gradient stop 2: #FFC62A at offset 1.0
+    -->
+    <path
+        android:pathData="M0,0 L108,0 L108,108 L0,108 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="54"
+                android:centerY="54"
+                android:gradientRadius="33.75"
+                android:tileMode="disabled">
+                <item android:offset="0.381" android:color="#FFFFEA99" />
+                <item android:offset="1.0"   android:color="#FFFFC62A" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+</vector>

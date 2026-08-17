@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Arvo UV</string>
+    <string name="widget_description">Shows the current UV index for your nearest station</string>
+</resources>
