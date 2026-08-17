@@ -448,6 +448,12 @@ private fun BottomPane(
                     distanceKm = distanceKm?.roundToInt() ?: 0,
                     onInfoClick = onShowDistanceModal,
                 )
+            } else {
+                Text(
+                    text = "UV observations courtesy of ARPANSA",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
