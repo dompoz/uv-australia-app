@@ -130,6 +130,16 @@ fun StationPickerSheet(
                 items(ELSEWHERE_STATIONS) { station ->
                     StationRow(station, station.code == currentStation?.code, onSelectStation)
                 }
+                item {
+                    Text(
+                        text = "UV observations courtesy of ARPANSA",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 16.dp),
+                    )
+                }
             }
         }
     }
