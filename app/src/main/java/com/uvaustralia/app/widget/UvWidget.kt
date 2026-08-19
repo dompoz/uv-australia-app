@@ -20,6 +20,7 @@ import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
+import androidx.glance.color.ColorProvider
 import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
@@ -31,7 +32,6 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import com.uvaustralia.app.MainActivity
 
 // Keys written by UvWidgetWorker
@@ -43,21 +43,50 @@ val WIDGET_KEY_PROTECTION_START = intPreferencesKey("widget_protection_start")
 val WIDGET_KEY_PROTECTION_END   = intPreferencesKey("widget_protection_end")
 val WIDGET_KEY_CURRENT_MINUTES  = intPreferencesKey("widget_current_minutes")
 
-private fun hex(color: String): ColorProvider =
-    ColorProvider(Color(android.graphics.Color.parseColor(color)))
+private fun dn(day: Color, night: Color): androidx.glance.unit.ColorProvider =
+    ColorProvider(day = day, night = night)
 
-// Dark-theme brand palette
-private val LabelColor = hex("#FFCCBB77")
-private val TextColor  = hex("#FFFFEA99")
+private data class UvBand(
+    val text:  androidx.glance.unit.ColorProvider,
+    val label: androidx.glance.unit.ColorProvider, // text at 60% opacity
+    val box:   androidx.glance.unit.ColorProvider,
+)
 
-// UV band colours (dark theme, matching Color.kt)
-private data class UvBand(val text: ColorProvider, val box: ColorProvider)
+private fun band(
+    dayText: Color, nightText: Color,
+    dayBox:  Color, nightBox:  Color,
+): UvBand = UvBand(
+    text  = dn(dayText,                 nightText),
+    label = dn(dayText.copy(alpha = 0.6f), nightText.copy(alpha = 0.6f)),
+    box   = dn(dayBox,                  nightBox),
+)
 
-private val BAND_LOW = UvBand(TextColor,        hex("#FF2A2200"))
-private val BAND_6   = UvBand(hex("#FFFFCECA"), hex("#FF420C13"))
-private val BAND_8   = UvBand(hex("#FFFFC8FD"), hex("#FF3A0738"))
-private val BAND_11  = UvBand(hex("#FFE1BDFF"), hex("#FF310749"))
-private val BAND_EX  = UvBand(hex("#FFCAC1FF"), hex("#FF260858"))
+private val BAND_LOW = band(
+    dayText   = Color(0xFF3A2800), nightText = Color(0xFFFFEA99),
+    dayBox    = Color(0xFFFFF4CC), nightBox  = Color(0xFF2A2200),
+)
+private val BAND_6 = band(
+    dayText   = Color(0xFF4F0008), nightText = Color(0xFFFFCECA),
+    dayBox    = Color(0xFFFFDFDD), nightBox  = Color(0xFF420C13),
+)
+private val BAND_8 = band(
+    dayText   = Color(0xFF440044), nightText = Color(0xFFFFC8FD),
+    dayBox    = Color(0xFFFFDFFE), nightBox  = Color(0xFF3A0738),
+)
+private val BAND_11 = band(
+    dayText   = Color(0xFF3A0057), nightText = Color(0xFFE1BDFF),
+    dayBox    = Color(0xFFF0E0FF), nightBox  = Color(0xFF310749),
+)
+private val BAND_EX = band(
+    dayText   = Color(0xFF2D0068), nightText = Color(0xFFCAC1FF),
+    dayBox    = Color(0xFFE7E4FF), nightBox  = Color(0xFF260858),
+)
+
+// Fallback used when no UV data is available
+private val BAND_NONE = band(
+    dayText   = Color(0xFF6B4A00), nightText = Color(0xFFCCBB77),
+    dayBox    = Color(0xFFFFF4CC), nightBox  = Color(0xFF2A2200),
+)
 
 private fun uvBand(uv: Double): UvBand = when {
     uv < 3  -> BAND_LOW
@@ -70,30 +99,24 @@ private fun uvBand(uv: Double): UvBand = when {
 private fun formatUv(uv: Double): String =
     if (uv == uv.toLong().toDouble()) uv.toLong().toString() else "%.1f".format(uv)
 
-// Responsive size breakpoints.
-// COMPACT is served when the launcher allocates less than ~100×100dp — typical
-// of a 1×1 cell on high-density or small-grid launchers. FULL is used otherwise.
 private val SIZE_COMPACT = DpSize(80.dp,  80.dp)
 private val SIZE_FULL    = DpSize(100.dp, 100.dp)
 
 class UvWidget : GlanceAppWidget() {
     override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
-
     override val sizeMode = SizeMode.Responsive(setOf(SIZE_COMPACT, SIZE_FULL))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
-            val prefs       = currentState<Preferences>()
-            val uvIndex     = prefs[WIDGET_KEY_UV_INDEX]
-            val status      = prefs[WIDGET_KEY_STATUS] ?: "OK"
+            val prefs   = currentState<Preferences>()
+            val uvIndex = prefs[WIDGET_KEY_UV_INDEX]
+            val status  = prefs[WIDGET_KEY_STATUS] ?: "OK"
 
             val isUnavailable = status == "NA"
-            val band          = uvIndex?.let { uvBand(it) }
+            val band          = if (isUnavailable || uvIndex == null) BAND_NONE else uvBand(uvIndex)
             val numberText    = if (isUnavailable || uvIndex == null) "—" else formatUv(uvIndex)
-            val numberColor   = band?.text ?: LabelColor
-            val boxColor      = band?.box ?: hex("#FF2A2200")
             val uvLabel       = if (isUnavailable) "Offline" else "UV Index"
-            // Pick font sizes based on which responsive size Glance matched
+
             val isCompact     = LocalSize.current.width < SIZE_FULL.width
             val numFontSize   = if (isCompact) 28.sp else 36.sp
             val labelFontSize = if (isCompact) 8.sp  else 10.sp
@@ -101,7 +124,7 @@ class UvWidget : GlanceAppWidget() {
             Column(
                 modifier = GlanceModifier
                     .fillMaxSize()
-                    .background(boxColor)
+                    .background(band.box)
                     .clickable(actionStartActivity(MainActivity::class.java))
                     .padding(horizontal = 10.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -110,7 +133,7 @@ class UvWidget : GlanceAppWidget() {
                 Text(
                     text = numberText,
                     style = TextStyle(
-                        color = numberColor,
+                        color = band.text,
                         fontSize = numFontSize,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
@@ -119,7 +142,7 @@ class UvWidget : GlanceAppWidget() {
                 Text(
                     text = uvLabel,
                     style = TextStyle(
-                        color = LabelColor,
+                        color = band.label,
                         fontSize = labelFontSize,
                         textAlign = TextAlign.Center,
                     ),
