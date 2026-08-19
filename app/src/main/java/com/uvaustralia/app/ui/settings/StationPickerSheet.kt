@@ -26,7 +26,10 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.uvaustralia.app.ui.theme.JostFamily
 import com.uvaustralia.app.domain.AUSTRALIAN_STATIONS
 import com.uvaustralia.app.domain.ELSEWHERE_STATIONS
 import com.uvaustralia.app.domain.Station
@@ -133,7 +136,11 @@ fun StationPickerSheet(
                 item {
                     Text(
                         text = "UV observations courtesy of ARPANSA",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = JostFamily,
+                            fontWeight = FontWeight.ExtraLight,
+                            fontStyle = FontStyle.Italic,
+                        ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
                             .fillMaxWidth()

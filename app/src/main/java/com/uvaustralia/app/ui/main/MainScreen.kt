@@ -44,7 +44,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import com.uvaustralia.app.ui.theme.JostFamily
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -451,7 +454,11 @@ private fun BottomPane(
             } else {
                 Text(
                     text = "UV observations courtesy of ARPANSA",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontFamily = JostFamily,
+                        fontWeight = FontWeight.ExtraLight,
+                        fontStyle = FontStyle.Italic,
+                    ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
