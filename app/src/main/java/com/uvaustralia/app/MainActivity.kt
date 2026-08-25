@@ -5,11 +5,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.uvaustralia.app.prefs.ThemePreference
 import com.uvaustralia.app.ui.main.MainScreen
 import com.uvaustralia.app.ui.main.MainViewModel
 import com.uvaustralia.app.ui.theme.UvAustraliaTheme
@@ -27,7 +29,15 @@ class MainActivity : ComponentActivity() {
         UvWidgetWorker.schedule(this)
 
         setContent {
-            UvAustraliaTheme {
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+            val darkTheme = when (uiState.themePreference) {
+                ThemePreference.DARK   -> true
+                ThemePreference.LIGHT  -> false
+                ThemePreference.SYSTEM -> isSystemInDarkTheme()
+            }
+
+            UvAustraliaTheme(darkTheme = darkTheme) {
                 val locationPermission = rememberPermissionState(
                     permission = Manifest.permission.ACCESS_COARSE_LOCATION,
                     onPermissionResult = { granted ->
@@ -35,8 +45,6 @@ class MainActivity : ComponentActivity() {
                         else viewModel.onLocationPermissionDenied()
                     }
                 )
-
-                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
                 if (uiState.locationPermissionNeeded && !locationPermission.status.isGranted) {
                     androidx.compose.runtime.LaunchedEffect(Unit) {

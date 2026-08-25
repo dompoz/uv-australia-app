@@ -13,6 +13,7 @@ import com.uvaustralia.app.domain.UvReading
 import com.uvaustralia.app.domain.computeProtectionWindow
 import com.uvaustralia.app.domain.distanceTo
 import com.uvaustralia.app.domain.nearestStation
+import com.uvaustralia.app.prefs.ThemePreference
 import com.uvaustralia.app.prefs.UserPreferences
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -36,6 +37,7 @@ data class MainUiState(
     val liveError: Boolean = false,
     val curveError: Boolean = false,
     val locationPermissionNeeded: Boolean = false,
+    val themePreference: ThemePreference = ThemePreference.SYSTEM,
 )
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
@@ -53,7 +55,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     init {
         viewModelScope.launch {
             val autoLocation = prefs.autoLocation.first()
-            _uiState.update { it.copy(autoLocation = autoLocation) }
+            val theme = prefs.themePreference.first()
+            _uiState.update { it.copy(autoLocation = autoLocation, themePreference = theme) }
             if (autoLocation) {
                 resolveLocationAndLoad()
             } else {
@@ -179,6 +182,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             livePollingJob = null
         } else {
             startLivePolling()
+        }
+    }
+
+    fun setThemePreference(theme: ThemePreference) {
+        viewModelScope.launch {
+            prefs.saveTheme(theme)
+            _uiState.update { it.copy(themePreference = theme) }
         }
     }
 }

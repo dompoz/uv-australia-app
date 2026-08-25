@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Settings
@@ -52,7 +53,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.uvaustralia.app.BuildConfig
+import com.uvaustralia.app.prefs.ThemePreference
 import com.uvaustralia.app.ui.settings.StationPickerSheet
+import com.uvaustralia.app.ui.settings.ThemePickerSheet
 import java.time.LocalTime
 import kotlin.math.roundToInt
 
@@ -65,6 +68,7 @@ fun MainScreen(viewModel: MainViewModel) {
         onSelectStation = { viewModel.selectStation(it) },
         onAutoLocationToggle = { viewModel.setAutoLocation(it) },
         onLivePollingPaused = { viewModel.setLivePollingPaused(it) },
+        onThemeChange = { viewModel.setThemePreference(it) },
     )
 }
 
@@ -76,10 +80,12 @@ internal fun MainScreenContent(
     onSelectStation: (com.uvaustralia.app.domain.Station) -> Unit = {},
     onAutoLocationToggle: (Boolean) -> Unit = {},
     onLivePollingPaused: (Boolean) -> Unit = {},
+    onThemeChange: (ThemePreference) -> Unit = {},
 ) {
     var showPicker by remember { mutableStateOf(false) }
     var showDistanceModal by remember { mutableStateOf(false) }
     var showDevMenu by remember { mutableStateOf(false) }
+    var showThemePicker by remember { mutableStateOf(false) }
     var devOverrides by remember { mutableStateOf(initialDevOverrides) }
     var graphExpanded by remember { mutableStateOf(false) }
 
@@ -127,6 +133,7 @@ internal fun MainScreenContent(
                             devOverrides = devOverrides,
                             onShowPicker = { showPicker = true },
                             onShowDevMenu = { showDevMenu = true },
+                            onShowThemePicker = { showThemePicker = true },
                             modifier = Modifier
                                 .width(topWidth)
                                 .fillMaxHeight(),
@@ -150,6 +157,7 @@ internal fun MainScreenContent(
                             devOverrides = devOverrides,
                             onShowPicker = { showPicker = true },
                             onShowDevMenu = { showDevMenu = true },
+                            onShowThemePicker = { showThemePicker = true },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(topHeight),
@@ -217,6 +225,17 @@ internal fun MainScreenContent(
                 devOverrides = new
             },
             onDismiss = { showDevMenu = false },
+        )
+    }
+
+    if (showThemePicker) {
+        ThemePickerSheet(
+            current = state.themePreference,
+            onSelect = { theme ->
+                onThemeChange(theme)
+                showThemePicker = false
+            },
+            onDismiss = { showThemePicker = false },
         )
     }
 }
@@ -300,6 +319,7 @@ private fun TopPane(
     devOverrides: DevOverrides,
     onShowPicker: () -> Unit,
     onShowDevMenu: () -> Unit,
+    onShowThemePicker: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -337,6 +357,13 @@ private fun TopPane(
                         tint = MaterialTheme.colorScheme.onBackground,
                     )
                 }
+            }
+            IconButton(onClick = onShowThemePicker) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = "Appearance",
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
             }
         }
 
