@@ -1,7 +1,7 @@
 package com.uvaustralia.app.ui.main
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.uvaustralia.app.ui.theme.LocalIsDarkTheme
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
@@ -55,7 +55,7 @@ fun UvGraph(
 ) {
     val textMeasurer = rememberTextMeasurer()
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalIsDarkTheme.current
 
     val colorForecast = if (isDark) GraphForecastDark  else GraphForecastLight
     val colorMeasured = MaterialTheme.colorScheme.primary

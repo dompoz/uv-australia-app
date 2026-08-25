@@ -5,7 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.uvaustralia.app.ui.theme.LocalIsDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -168,7 +168,7 @@ private data class UvColors(val text: androidx.compose.ui.graphics.Color, val bo
 
 @Composable
 private fun uvColors(uv: Double): UvColors {
-    val dark = isSystemInDarkTheme()
+    val dark = LocalIsDarkTheme.current
     return when {
         uv < 3  -> UvColors(
             text = MaterialTheme.colorScheme.onSurface,
