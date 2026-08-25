@@ -16,17 +16,17 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,8 +39,6 @@ import com.uvaustralia.app.ui.theme.GraphForecastDark
 import com.uvaustralia.app.ui.theme.GraphForecastLight
 import com.uvaustralia.app.ui.theme.GraphShadeBottomDark
 import com.uvaustralia.app.ui.theme.GraphShadeBottomLight
-import com.uvaustralia.app.ui.theme.GraphShadeTopDark
-import com.uvaustralia.app.ui.theme.GraphShadeTopLight
 import com.uvaustralia.app.ui.theme.JostFamily
 import kotlinx.coroutines.delay
 import java.time.LocalTime
@@ -57,14 +55,13 @@ fun UvGraph(
 ) {
     val textMeasurer = rememberTextMeasurer()
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
-    val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
     val isDark = isSystemInDarkTheme()
 
-    val shadeTop    = if (isDark) GraphShadeTopDark    else GraphShadeTopLight
-    val shadeBottom = if (isDark) GraphShadeBottomDark else GraphShadeBottomLight
     val colorForecast = if (isDark) GraphForecastDark  else GraphForecastLight
     val colorMeasured = MaterialTheme.colorScheme.primary
-    val bgAlpha = if (isDark) 1f else 0.35f
+    val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
+    val curveFillColor = if (isDark) Color(0xFFFFA000) else Color(0xFFFFC259)
+    val protectionBandColor = if (isDark) GraphShadeBottomDark else GraphShadeBottomLight
 
     var nowMinutes by remember { mutableIntStateOf(LocalTime.now().let { it.hour * 60 + it.minute }) }
     LaunchedEffect(Unit) {
@@ -114,59 +111,30 @@ fun UvGraph(
         fun uvToY(uv: Double): Float =
             chartBottom - (uv / GRAPH_MAX_UV).toFloat() * chartHeight
 
-        // Background fill
-        drawRect(
-            color = surfaceVariant.copy(alpha = bgAlpha),
-            topLeft = Offset(chartLeft, chartTop),
-            size = Size(chartWidth, chartHeight),
-        )
-
-        // Protection shading (UV >= 3 zone, upward gradient)
+        // Protection shading extents (still needed for label + threshold line positioning)
         val shadeTopY    = uvToY(GRAPH_MAX_UV)
         val shadeBottomY = uvToY(PROTECTION_THRESHOLD)
+
+        // Protection band: UV 3–6, alpha 0.5 at UV=3 (bottom) fading to 0 at UV=6 (top)
+        val shadeUv6Y = uvToY(6.0)
         drawRect(
             brush = Brush.verticalGradient(
-                colors = listOf(shadeTop, shadeBottom),
-                startY = shadeTopY,
-                endY = shadeBottomY,
+                colors = listOf(
+                    protectionBandColor.copy(alpha = 0f),
+                    protectionBandColor.copy(alpha = 0.25f),
+                ),
+                startY = shadeUv6Y,
+                endY   = shadeBottomY,
             ),
-            topLeft = Offset(chartLeft, shadeTopY),
-            size = Size(chartWidth, shadeBottomY - shadeTopY),
+            topLeft = Offset(chartLeft, shadeUv6Y),
+            size    = Size(chartWidth, shadeBottomY - shadeUv6Y),
         )
 
-        // Future region darkening — drawn before curves so they appear on top
+        // Future region — track nowX for curve clipping reference
         val nowX = if (nowMinutes in GRAPH_START_MINUTE..GRAPH_END_MINUTE)
             minuteToX(nowMinutes) else null
-        if (nowX != null && nowX < chartRight) {
-            drawRect(
-                color = Color.Gray.copy(alpha = if (isDark) 0.30f else 0.20f),
-                topLeft = Offset(nowX, chartTop),
-                size = Size(chartRight - nowX, chartHeight),
-            )
-        }
 
-        // "↑ Protection Recommended ↑" label centred just above the threshold line
         val thresholdColor = if (isDark) Color(0xEEFF9900) else Color(0xeee38826)
-        val labelColor = thresholdColor
-        val labelStyle = TextStyle(
-            fontFamily = JostFamily,
-            color = labelColor,
-            fontSize = axisFontSp,
-            fontWeight = FontWeight.Light,
-            textAlign = TextAlign.Center,
-        )
-        val labelText = "↑ Protection Recommended ↑"
-        val labelResult = textMeasurer.measure(labelText, labelStyle)
-        val labelY = shadeBottomY - labelResult.size.height - 3.dp.toPx()
-        if (labelY > shadeTopY) {
-            drawText(
-                textLayoutResult = labelResult,
-                topLeft = Offset(
-                    chartLeft + (chartWidth - labelResult.size.width) / 2f,
-                    labelY,
-                ),
-            )
-        }
 
         // Grid lines + Y axis labels (skip 0 to avoid clash with "6 AM")
         val gridUvValues = listOf(3, 6, 9, 12, 15)
@@ -224,18 +192,29 @@ fun UvGraph(
             )
         }
 
-        // Threshold line at UV 3
-        val thresholdY = uvToY(PROTECTION_THRESHOLD)
-        drawLine(
-            color = thresholdColor,
-            start = Offset(chartLeft, thresholdY),
-            end   = Offset(chartRight, thresholdY),
-            strokeWidth = 1.dp.toPx(),
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)),
-        )
-
         if (curve.isNotEmpty()) {
             clipRect(chartLeft, chartTop, chartRight, chartBottom) {
+                // Fill under the measured curve with a surfaceVariant alpha gradient
+                val measuredPoints = curve.filter { (it.measured ?: -1.0) >= 0 }
+                if (measuredPoints.isNotEmpty()) {
+                    val peakY = measuredPoints.minOf { uvToY(it.measured!!) }
+                    drawCurveFill(
+                        points = measuredPoints,
+                        getValue = { it.measured!! },
+                        fillBrush = Brush.verticalGradient(
+                            colors = listOf(
+                                curveFillColor.copy(alpha = 1.0f),
+                                curveFillColor.copy(alpha = 0f),
+                            ),
+                            startY = peakY,
+                            endY   = chartBottom,
+                        ),
+                        chartBottom = chartBottom,
+                        minuteToX = ::minuteToX,
+                        uvToY = ::uvToY,
+                    )
+                }
+
                 drawCurve(
                     points = curve,
                     getValue = { it.forecast },
@@ -269,8 +248,62 @@ fun UvGraph(
             }
         }
 
+        // Threshold line and label drawn last so they appear on top of all other elements
+        val thresholdY = uvToY(PROTECTION_THRESHOLD)
+        drawLine(
+            color = thresholdColor,
+            start = Offset(chartLeft, thresholdY),
+            end   = Offset(chartRight, thresholdY),
+            strokeWidth = 1.dp.toPx(),
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)),
+        )
+        val labelStyle = TextStyle(
+            fontFamily = JostFamily,
+            color = thresholdColor,
+            fontSize = axisFontSp,
+            fontWeight = FontWeight.Light,
+        )
+        val labelResult = textMeasurer.measure("Protection Recommended", labelStyle)
+        // Rotate -90° so text reads bottom-to-top. After rotation the text occupies
+        // a vertical strip of width = labelResult.height at the right edge.
+        // Pivot at top-left of the unrotated text; after -90° rotation that pivot
+        // maps the text so its bottom sits at thresholdY and its right edge at chartRight.
+        val textW = labelResult.size.width.toFloat()
+        val textH = labelResult.size.height.toFloat()
+        val pivotX = chartRight - textH
+        val pivotY = thresholdY - 3.dp.toPx()
+        if (pivotY - textW > shadeTopY) {
+            withTransform({
+                rotate(degrees = -90f, pivot = Offset(pivotX, pivotY))
+            }) {
+                drawText(
+                    textLayoutResult = labelResult,
+                    topLeft = Offset(pivotX, pivotY),
+                )
+            }
+        }
+
 
     } // end Canvas
+}
+
+private fun DrawScope.drawCurveFill(
+    points: List<UvCurvePoint>,
+    getValue: (UvCurvePoint) -> Double,
+    fillBrush: Brush,
+    chartBottom: Float,
+    minuteToX: (Int) -> Float,
+    uvToY: (Double) -> Float,
+) {
+    if (points.isEmpty()) return
+    val path = Path()
+    path.moveTo(minuteToX(points.first().minutesFromMidnight), chartBottom)
+    for (point in points) {
+        path.lineTo(minuteToX(point.minutesFromMidnight), uvToY(getValue(point)))
+    }
+    path.lineTo(minuteToX(points.last().minutesFromMidnight), chartBottom)
+    path.close()
+    drawPath(path = path, brush = fillBrush, style = Fill)
 }
 
 private fun DrawScope.drawCurve(
