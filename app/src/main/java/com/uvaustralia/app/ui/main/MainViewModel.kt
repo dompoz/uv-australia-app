@@ -13,6 +13,7 @@ import com.uvaustralia.app.domain.UvReading
 import com.uvaustralia.app.domain.computeProtectionWindow
 import com.uvaustralia.app.domain.distanceTo
 import com.uvaustralia.app.domain.nearestStation
+import com.uvaustralia.app.prefs.RiskScheme
 import com.uvaustralia.app.prefs.ThemePreference
 import com.uvaustralia.app.prefs.UserPreferences
 import kotlinx.coroutines.Job
@@ -38,6 +39,7 @@ data class MainUiState(
     val curveError: Boolean = false,
     val locationPermissionNeeded: Boolean = false,
     val themePreference: ThemePreference = ThemePreference.SYSTEM,
+    val riskScheme: RiskScheme = RiskScheme.SUNSMART,
 )
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
@@ -56,7 +58,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val autoLocation = prefs.autoLocation.first()
             val theme = prefs.themePreference.first()
-            _uiState.update { it.copy(autoLocation = autoLocation, themePreference = theme) }
+            val scheme = prefs.riskScheme.first()
+            _uiState.update { it.copy(autoLocation = autoLocation, themePreference = theme, riskScheme = scheme) }
             if (autoLocation) {
                 resolveLocationAndLoad()
             } else {
@@ -189,6 +192,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             prefs.saveTheme(theme)
             _uiState.update { it.copy(themePreference = theme) }
+        }
+    }
+
+    fun setRiskScheme(scheme: RiskScheme) {
+        viewModelScope.launch {
+            prefs.saveRiskScheme(scheme)
+            _uiState.update { it.copy(riskScheme = scheme) }
         }
     }
 }

@@ -20,12 +20,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import com.uvaustralia.app.domain.PROTECTION_THRESHOLD
+import com.uvaustralia.app.domain.UviBand
+import com.uvaustralia.app.domain.uviBandFor
+import com.uvaustralia.app.prefs.RiskScheme
 import com.uvaustralia.app.ui.theme.UvDarkBox11
 import com.uvaustralia.app.ui.theme.UvDarkBox6
 import com.uvaustralia.app.ui.theme.UvDarkBox8
@@ -42,6 +46,26 @@ import com.uvaustralia.app.ui.theme.UvLightText11
 import com.uvaustralia.app.ui.theme.UvLightText6
 import com.uvaustralia.app.ui.theme.UvLightText8
 import com.uvaustralia.app.ui.theme.UvLightTextEx
+import com.uvaustralia.app.ui.theme.WhoDarkBoxExtreme
+import com.uvaustralia.app.ui.theme.WhoDarkBoxHigh
+import com.uvaustralia.app.ui.theme.WhoDarkBoxLow
+import com.uvaustralia.app.ui.theme.WhoDarkBoxModerate
+import com.uvaustralia.app.ui.theme.WhoDarkBoxVeryHigh
+import com.uvaustralia.app.ui.theme.WhoDarkTextExtreme
+import com.uvaustralia.app.ui.theme.WhoDarkTextHigh
+import com.uvaustralia.app.ui.theme.WhoDarkTextLow
+import com.uvaustralia.app.ui.theme.WhoDarkTextModerate
+import com.uvaustralia.app.ui.theme.WhoDarkTextVeryHigh
+import com.uvaustralia.app.ui.theme.WhoLightBoxExtreme
+import com.uvaustralia.app.ui.theme.WhoLightBoxHigh
+import com.uvaustralia.app.ui.theme.WhoLightBoxLow
+import com.uvaustralia.app.ui.theme.WhoLightBoxModerate
+import com.uvaustralia.app.ui.theme.WhoLightBoxVeryHigh
+import com.uvaustralia.app.ui.theme.WhoLightTextExtreme
+import com.uvaustralia.app.ui.theme.WhoLightTextHigh
+import com.uvaustralia.app.ui.theme.WhoLightTextLow
+import com.uvaustralia.app.ui.theme.WhoLightTextModerate
+import com.uvaustralia.app.ui.theme.WhoLightTextVeryHigh
 import com.uvaustralia.app.ui.theme.WarningColor
 
 // Height reserved for the "Sun protection recommended" line so sibling
@@ -53,12 +77,13 @@ fun UvIndexDisplay(
     uvIndex: Double?,
     isError: Boolean,
     stationStatus: String,
+    riskScheme: RiskScheme = RiskScheme.SUNSMART,
     forceProtectionWarning: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val showProtectionWarning = forceProtectionWarning ||
         (uvIndex != null && uvIndex >= PROTECTION_THRESHOLD && stationStatus != "NA" && !isError)
-    val currentUvColors = uvIndex?.let { uvColors(it) }
+    val currentUvColors = uvIndex?.let { uvColors(it, riskScheme) }
 
     Column(
         modifier = modifier,
@@ -88,11 +113,22 @@ fun UvIndexDisplay(
                     )
                 }
                 else -> {
-                    val uvColors = uvColors(index)  // animated; currentUvColors used for warning
+                    val uvColors = uvColors(index, riskScheme)
                     val numberStyle = MaterialTheme.typography.displayMedium.copy(fontSize = 80.sp)
                     val labelStyle  = MaterialTheme.typography.bodyMedium
                     val labelColor  = uvColors.text.copy(alpha = 0.5f)
                     val boxWidthDp  = 160.dp
+
+                    val labelText: String
+                    val labelFontWeight: FontWeight
+                    if (riskScheme == RiskScheme.GLOBAL_SOLAR_UVI) {
+                        labelText = uviBandFor(index).displayName
+                        labelFontWeight = FontWeight.SemiBold
+                    } else {
+                        labelText = "UV Index"
+                        labelFontWeight = FontWeight.Normal
+                    }
+
                     SubcomposeLayout(
                         modifier = Modifier
                             .clip(RoundedCornerShape(16.dp))
@@ -115,14 +151,13 @@ fun UvIndexDisplay(
 
                         val labelPlaceable = subcompose("label") {
                             Text(
-                                text = "UV Index",
-                                style = labelStyle,
+                                text = labelText,
+                                style = labelStyle.copy(fontWeight = labelFontWeight),
                                 color = labelColor,
                                 textAlign = TextAlign.Center,
                             )
                         }[0].measure(widthConstraints)
 
-                        // Midpoint between baseline (~75% of box) and bottom (100%)
                         val labelCentreY = (boxHeight * 0.875f).roundToInt()
                         val labelY = labelCentreY - labelPlaceable.height / 2
 
@@ -164,11 +199,20 @@ private fun formatUv(uv: Double): String {
     else "%.1f".format(uv)
 }
 
-private data class UvColors(val text: androidx.compose.ui.graphics.Color, val box: androidx.compose.ui.graphics.Color)
+private data class UvColors(val text: Color, val box: Color)
 
 @Composable
-private fun uvColors(uv: Double): UvColors {
+private fun uvColors(uv: Double, riskScheme: RiskScheme): UvColors {
     val dark = LocalIsDarkTheme.current
+    return if (riskScheme == RiskScheme.GLOBAL_SOLAR_UVI) {
+        whoUvColors(uv, dark)
+    } else {
+        sunSmartUvColors(uv, dark)
+    }
+}
+
+@Composable
+private fun sunSmartUvColors(uv: Double, dark: Boolean): UvColors {
     return when {
         uv < 3  -> UvColors(
             text = MaterialTheme.colorScheme.onSurface,
@@ -178,5 +222,15 @@ private fun uvColors(uv: Double): UvColors {
         uv < 8  -> if (dark) UvColors(UvDarkText8,  UvDarkBox8)  else UvColors(UvLightText8,  UvLightBox8)
         uv < 11 -> if (dark) UvColors(UvDarkText11, UvDarkBox11) else UvColors(UvLightText11, UvLightBox11)
         else    -> if (dark) UvColors(UvDarkTextEx, UvDarkBoxEx) else UvColors(UvLightTextEx, UvLightBoxEx)
+    }
+}
+
+private fun whoUvColors(uv: Double, dark: Boolean): UvColors {
+    return when (uviBandFor(uv)) {
+        UviBand.LOW       -> if (dark) UvColors(WhoDarkTextLow,      WhoDarkBoxLow)      else UvColors(WhoLightTextLow,      WhoLightBoxLow)
+        UviBand.MODERATE  -> if (dark) UvColors(WhoDarkTextModerate, WhoDarkBoxModerate) else UvColors(WhoLightTextModerate, WhoLightBoxModerate)
+        UviBand.HIGH      -> if (dark) UvColors(WhoDarkTextHigh,     WhoDarkBoxHigh)     else UvColors(WhoLightTextHigh,     WhoLightBoxHigh)
+        UviBand.VERY_HIGH -> if (dark) UvColors(WhoDarkTextVeryHigh, WhoDarkBoxVeryHigh) else UvColors(WhoLightTextVeryHigh, WhoLightBoxVeryHigh)
+        UviBand.EXTREME   -> if (dark) UvColors(WhoDarkTextExtreme,  WhoDarkBoxExtreme)  else UvColors(WhoLightTextExtreme,  WhoLightBoxExtreme)
     }
 }

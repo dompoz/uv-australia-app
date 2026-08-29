@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.uvaustralia.app.BuildConfig
+import com.uvaustralia.app.prefs.RiskScheme
 import com.uvaustralia.app.prefs.ThemePreference
 import com.uvaustralia.app.ui.settings.StationPickerSheet
 import com.uvaustralia.app.ui.settings.ThemePickerSheet
@@ -69,6 +70,7 @@ fun MainScreen(viewModel: MainViewModel) {
         onAutoLocationToggle = { viewModel.setAutoLocation(it) },
         onLivePollingPaused = { viewModel.setLivePollingPaused(it) },
         onThemeChange = { viewModel.setThemePreference(it) },
+        onRiskSchemeChange = { viewModel.setRiskScheme(it) },
     )
 }
 
@@ -81,6 +83,7 @@ internal fun MainScreenContent(
     onAutoLocationToggle: (Boolean) -> Unit = {},
     onLivePollingPaused: (Boolean) -> Unit = {},
     onThemeChange: (ThemePreference) -> Unit = {},
+    onRiskSchemeChange: (RiskScheme) -> Unit = {},
 ) {
     var showPicker by remember { mutableStateOf(false) }
     var showDistanceModal by remember { mutableStateOf(false) }
@@ -230,10 +233,13 @@ internal fun MainScreenContent(
 
     if (showThemePicker) {
         ThemePickerSheet(
-            current = state.themePreference,
-            onSelect = { theme ->
+            currentTheme = state.themePreference,
+            currentScheme = state.riskScheme,
+            onSelectTheme = { theme ->
                 onThemeChange(theme)
-                showThemePicker = false
+            },
+            onSelectScheme = { scheme ->
+                onRiskSchemeChange(scheme)
             },
             onDismiss = { showThemePicker = false },
         )
@@ -285,6 +291,8 @@ private fun ExpandedGraph(
                     UvGraph(
                         curve = state.curve,
                         graphHeight = graphHeight,
+                        riskScheme = state.riskScheme,
+                        showMinorGridLines = true,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = hMargin, end = hMargin + 21.dp),
@@ -380,6 +388,7 @@ private fun TopPane(
                     uvIndex = devOverrides.devUvIndex ?: state.currentUvIndex,
                     isError = state.liveError,
                     stationStatus = state.stationStatus,
+                    riskScheme = state.riskScheme,
                     forceProtectionWarning = devOverrides.forceProtectionWarning,
                 )
 
@@ -459,6 +468,7 @@ private fun BottomPane(
                 UvGraph(
                     curve = state.curve,
                     graphHeight = graphHeight,
+                    riskScheme = state.riskScheme,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = hMargin, end = hMargin + 21.dp),

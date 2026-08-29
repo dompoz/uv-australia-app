@@ -6,7 +6,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -38,6 +40,11 @@ class MainActivity : ComponentActivity() {
             }
 
             UvAustraliaTheme(darkTheme = darkTheme) {
+                val controller = WindowCompat.getInsetsController(window, window.decorView)
+                SideEffect {
+                    controller.isAppearanceLightStatusBars = !darkTheme
+                    controller.isAppearanceLightNavigationBars = !darkTheme
+                }
                 val locationPermission = rememberPermissionState(
                     permission = Manifest.permission.ACCESS_COARSE_LOCATION,
                     onPermissionResult = { granted ->

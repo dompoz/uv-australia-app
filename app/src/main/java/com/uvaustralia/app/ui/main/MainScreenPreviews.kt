@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.uvaustralia.app.domain.ProtectionWindow
 import com.uvaustralia.app.domain.Station
+import com.uvaustralia.app.prefs.RiskScheme
 import com.uvaustralia.app.ui.theme.UvAustraliaTheme
 
 @Preview(name = "1. Squat Portrait (Foldable)", widthDp = 600, heightDp = 800, showBackground = true)
@@ -40,6 +41,33 @@ fun MainScreenPreview() {
             initialDevOverrides = DevOverrides(
                 forceProtectionWindow = true,
                 forceFigureInaccuracy = true,
+            ),
+        )
+    }
+}
+
+@AdaptiveEdgeCasePreviews
+@Composable
+fun MainScreenPreviewWhoScheme() {
+    UvAustraliaTheme {
+        MainScreenContent(
+            state = previewState.copy(riskScheme = RiskScheme.GLOBAL_SOLAR_UVI),
+            initialDevOverrides = DevOverrides(
+                forceProtectionWindow = true,
+                forceFigureInaccuracy = true,
+            ),
+        )
+    }
+}
+
+@AdaptiveEdgeCasePreviews
+@Composable
+fun MainScreenPreviewLightWhoScheme() {
+    UvAustraliaTheme(darkTheme = false) {
+        MainScreenContent(
+            state = previewState.copy(riskScheme = RiskScheme.GLOBAL_SOLAR_UVI),
+            initialDevOverrides = DevOverrides(
+                forceProtectionWindow = true,
             ),
         )
     }

@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore by preferencesDataStore(name = "user_prefs")
 
 enum class ThemePreference { SYSTEM, LIGHT, DARK }
+enum class RiskScheme { SUNSMART, GLOBAL_SOLAR_UVI }
 
 class UserPreferences(private val context: Context) {
 
@@ -18,6 +19,7 @@ class UserPreferences(private val context: Context) {
         private val KEY_STATION_CODE = stringPreferencesKey("station_code")
         private val KEY_AUTO_LOCATION = booleanPreferencesKey("auto_location")
         private val KEY_THEME = stringPreferencesKey("theme")
+        private val KEY_RISK_SCHEME = stringPreferencesKey("risk_scheme")
     }
 
     val stationCode: Flow<String?> = context.dataStore.data.map { it[KEY_STATION_CODE] }
@@ -27,6 +29,12 @@ class UserPreferences(private val context: Context) {
             "LIGHT" -> ThemePreference.LIGHT
             "DARK"  -> ThemePreference.DARK
             else    -> ThemePreference.SYSTEM
+        }
+    }
+    val riskScheme: Flow<RiskScheme> = context.dataStore.data.map {
+        when (it[KEY_RISK_SCHEME]) {
+            "GLOBAL_SOLAR_UVI" -> RiskScheme.GLOBAL_SOLAR_UVI
+            else               -> RiskScheme.SUNSMART
         }
     }
 
@@ -40,5 +48,9 @@ class UserPreferences(private val context: Context) {
 
     suspend fun saveTheme(theme: ThemePreference) {
         context.dataStore.edit { it[KEY_THEME] = theme.name }
+    }
+
+    suspend fun saveRiskScheme(scheme: RiskScheme) {
+        context.dataStore.edit { it[KEY_RISK_SCHEME] = scheme.name }
     }
 }

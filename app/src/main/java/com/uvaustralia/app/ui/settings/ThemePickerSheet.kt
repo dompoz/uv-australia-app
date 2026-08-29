@@ -15,10 +15,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +38,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.uvaustralia.app.prefs.RiskScheme
 import com.uvaustralia.app.prefs.ThemePreference
 import com.uvaustralia.app.ui.theme.DarkBackground
 import com.uvaustralia.app.ui.theme.DarkOnSurface
@@ -44,6 +49,11 @@ import com.uvaustralia.app.ui.theme.LightOnSurface
 import com.uvaustralia.app.ui.theme.LightSurface
 import com.uvaustralia.app.ui.theme.UvAmber
 import com.uvaustralia.app.ui.theme.UvAmberLight
+import com.uvaustralia.app.ui.theme.WhoBandExtreme
+import com.uvaustralia.app.ui.theme.WhoBandHigh
+import com.uvaustralia.app.ui.theme.WhoBandLow
+import com.uvaustralia.app.ui.theme.WhoBandModerate
+import com.uvaustralia.app.ui.theme.WhoBandVeryHigh
 
 private val cardShape = RoundedCornerShape(12.dp)
 
@@ -58,8 +68,10 @@ private val darkCardIcon = UvAmber
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThemePickerSheet(
-    current: ThemePreference,
-    onSelect: (ThemePreference) -> Unit,
+    currentTheme: ThemePreference,
+    currentScheme: RiskScheme,
+    onSelectTheme: (ThemePreference) -> Unit,
+    onSelectScheme: (RiskScheme) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -69,11 +81,22 @@ fun ThemePickerSheet(
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+        Column(
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+        ) {
             Text(
                 text = "Appearance",
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(bottom = 20.dp),
+            )
+
+            Text(
+                text = "Display mode",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 12.dp),
             )
 
             Row(
@@ -81,8 +104,8 @@ fun ThemePickerSheet(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 SystemThemeCard(
-                    selected = current == ThemePreference.SYSTEM,
-                    onClick = { onSelect(ThemePreference.SYSTEM) },
+                    selected = currentTheme == ThemePreference.SYSTEM,
+                    onClick = { onSelectTheme(ThemePreference.SYSTEM) },
                     modifier = Modifier.weight(1f),
                 )
                 SingleThemeCard(
@@ -91,8 +114,8 @@ fun ThemePickerSheet(
                     bgColor = lightCardBg,
                     textColor = lightCardText,
                     iconColor = lightCardIcon,
-                    selected = current == ThemePreference.LIGHT,
-                    onClick = { onSelect(ThemePreference.LIGHT) },
+                    selected = currentTheme == ThemePreference.LIGHT,
+                    onClick = { onSelectTheme(ThemePreference.LIGHT) },
                     modifier = Modifier.weight(1f),
                 )
                 SingleThemeCard(
@@ -101,10 +124,37 @@ fun ThemePickerSheet(
                     bgColor = darkCardBg,
                     textColor = darkCardText,
                     iconColor = darkCardIcon,
-                    selected = current == ThemePreference.DARK,
-                    onClick = { onSelect(ThemePreference.DARK) },
+                    selected = currentTheme == ThemePreference.DARK,
+                    onClick = { onSelectTheme(ThemePreference.DARK) },
                     modifier = Modifier.weight(1f),
                 )
+            }
+
+            Spacer(Modifier.height(28.dp))
+
+            Text(
+                text = "Risk indication",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 12.dp),
+            )
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                SunSmartSchemeCard(
+                    selected = currentScheme == RiskScheme.SUNSMART,
+                    onClick = { onSelectScheme(RiskScheme.SUNSMART) },
+                    modifier = Modifier.weight(1f),
+                )
+                GlobalSolarUviSchemeCard(
+                    selected = currentScheme == RiskScheme.GLOBAL_SOLAR_UVI,
+                    onClick = { onSelectScheme(RiskScheme.GLOBAL_SOLAR_UVI) },
+                    modifier = Modifier.weight(1f),
+                )
+                // Empty third column to match the three-card theme row width
+                Spacer(modifier = Modifier.weight(1f))
             }
 
             Spacer(Modifier.height(32.dp))
@@ -211,6 +261,109 @@ private fun SystemThemeCard(
         Spacer(Modifier.height(6.dp))
         Text(
             text = "System",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun SunSmartSchemeCard(
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val borderColor = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
+    val bgColor = Color(0xFF3A2000)
+    val textColor = UvAmberLight
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier,
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1.25f)
+                .clip(cardShape)
+                .border(2.dp, borderColor, cardShape)
+                .background(bgColor)
+                .clickable(onClick = onClick),
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = Icons.Default.WbSunny,
+                    contentDescription = null,
+                    tint = UvAmber,
+                    modifier = Modifier.size(28.dp),
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "3+",
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                    ),
+                    color = textColor,
+                )
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = "SunSmart",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun GlobalSolarUviSchemeCard(
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val borderColor = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
+
+    val bandColors = listOf(
+        WhoBandExtreme,
+        WhoBandVeryHigh,
+        WhoBandHigh,
+        WhoBandModerate,
+        WhoBandLow,
+    )
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1.25f)
+                .clip(cardShape)
+                .border(2.dp, borderColor, cardShape)
+                .clickable(onClick = onClick),
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                for ((index, color) in bandColors.withIndex()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .background(color),
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = "Global Solar UVI",
             style = MaterialTheme.typography.labelMedium,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             color = MaterialTheme.colorScheme.onSurface,

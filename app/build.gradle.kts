@@ -30,8 +30,8 @@ android {
         applicationId = "com.pinktakhyper.uvaustralia"
         minSdk = 29
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
     }
 
     buildTypes {
@@ -87,6 +87,7 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.play.services.tasks.ktx)
     implementation(libs.accompanist.permissions)
+    implementation(libs.androidx.fragment)
     debugImplementation(libs.androidx.ui.tooling)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.crashlytics)

@@ -52,6 +52,26 @@ val UvTypography = Typography(
         fontSize   = 14.sp,
         lineHeight = 20.sp,
     ),
+    bodySmall = TextStyle(
+        fontFamily = JostFamily,
+        fontWeight = FontWeight.ExtraLight,
+        fontSize   = 12.sp,
+        lineHeight = 16.sp,
+    ),
+    labelLarge = TextStyle(
+        fontFamily    = JostFamily,
+        fontWeight    = FontWeight.Normal,
+        fontSize      = 14.sp,
+        lineHeight    = 20.sp,
+        letterSpacing = 0.1.sp,
+    ),
+    labelMedium = TextStyle(
+        fontFamily    = JostFamily,
+        fontWeight    = FontWeight.Light,
+        fontSize      = 12.sp,
+        lineHeight    = 16.sp,
+        letterSpacing = 0.5.sp,
+    ),
     labelSmall = TextStyle(
         fontFamily    = JostFamily,
         fontWeight    = FontWeight.Light,
