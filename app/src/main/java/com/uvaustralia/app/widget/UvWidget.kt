@@ -2,7 +2,6 @@ package com.uvaustralia.app.widget
 
 import android.content.Context
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
@@ -12,7 +11,6 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
-import androidx.glance.LocalSize
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -33,6 +31,27 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import com.uvaustralia.app.MainActivity
+import com.uvaustralia.app.prefs.RiskScheme
+import com.uvaustralia.app.ui.theme.WhoDarkBoxExtreme
+import com.uvaustralia.app.ui.theme.WhoDarkBoxHigh
+import com.uvaustralia.app.ui.theme.WhoDarkBoxLow
+import com.uvaustralia.app.ui.theme.WhoDarkBoxModerate
+import com.uvaustralia.app.ui.theme.WhoDarkBoxVeryHigh
+import com.uvaustralia.app.ui.theme.WhoDarkTextExtreme
+import com.uvaustralia.app.ui.theme.WhoDarkTextHigh
+import com.uvaustralia.app.ui.theme.WhoDarkTextLow
+import com.uvaustralia.app.ui.theme.WhoDarkTextModerate
+import com.uvaustralia.app.ui.theme.WhoDarkTextVeryHigh
+import com.uvaustralia.app.ui.theme.WhoLightBoxExtreme
+import com.uvaustralia.app.ui.theme.WhoLightBoxHigh
+import com.uvaustralia.app.ui.theme.WhoLightBoxLow
+import com.uvaustralia.app.ui.theme.WhoLightBoxModerate
+import com.uvaustralia.app.ui.theme.WhoLightBoxVeryHigh
+import com.uvaustralia.app.ui.theme.WhoLightTextExtreme
+import com.uvaustralia.app.ui.theme.WhoLightTextHigh
+import com.uvaustralia.app.ui.theme.WhoLightTextLow
+import com.uvaustralia.app.ui.theme.WhoLightTextModerate
+import com.uvaustralia.app.ui.theme.WhoLightTextVeryHigh
 
 // Keys written by UvWidgetWorker
 val WIDGET_KEY_UV_INDEX         = doublePreferencesKey("widget_uv_index")
@@ -42,25 +61,30 @@ val WIDGET_KEY_LOADING          = booleanPreferencesKey("widget_loading")
 val WIDGET_KEY_PROTECTION_START = intPreferencesKey("widget_protection_start")
 val WIDGET_KEY_PROTECTION_END   = intPreferencesKey("widget_protection_end")
 val WIDGET_KEY_CURRENT_MINUTES  = intPreferencesKey("widget_current_minutes")
+val WIDGET_KEY_RISK_SCHEME      = stringPreferencesKey("widget_risk_scheme")
 
 private fun dn(day: Color, night: Color): androidx.glance.unit.ColorProvider =
     ColorProvider(day = day, night = night)
 
 private data class UvBand(
-    val text:  androidx.glance.unit.ColorProvider,
-    val label: androidx.glance.unit.ColorProvider, // text at 60% opacity
-    val box:   androidx.glance.unit.ColorProvider,
+    val text:      androidx.glance.unit.ColorProvider,
+    val label:     androidx.glance.unit.ColorProvider,
+    val box:       androidx.glance.unit.ColorProvider,
+    val bandName:  String = "UV Index",
 )
 
 private fun band(
     dayText: Color, nightText: Color,
     dayBox:  Color, nightBox:  Color,
+    bandName: String = "UV Index",
 ): UvBand = UvBand(
-    text  = dn(dayText,                 nightText),
-    label = dn(dayText.copy(alpha = 0.6f), nightText.copy(alpha = 0.6f)),
-    box   = dn(dayBox,                  nightBox),
+    text     = dn(dayText,                    nightText),
+    label    = dn(dayText.copy(alpha = 0.6f), nightText.copy(alpha = 0.6f)),
+    box      = dn(dayBox,                     nightBox),
+    bandName = bandName,
 )
 
+// SunSmart bands
 private val BAND_LOW = band(
     dayText   = Color(0xFF3A2800), nightText = Color(0xFFFFEA99),
     dayBox    = Color(0xFFFFF4CC), nightBox  = Color(0xFF2A2200),
@@ -88,7 +112,7 @@ private val BAND_NONE = band(
     dayBox    = Color(0xFFFFF4CC), nightBox  = Color(0xFF2A2200),
 )
 
-private fun uvBand(uv: Double): UvBand = when {
+private fun sunSmartBand(uv: Double): UvBand = when {
     uv < 3  -> BAND_LOW
     uv < 6  -> BAND_6
     uv < 8  -> BAND_8
@@ -96,30 +120,75 @@ private fun uvBand(uv: Double): UvBand = when {
     else    -> BAND_EX
 }
 
+// WHO Global Solar UVI bands
+private val WHO_BAND_LOW = band(
+    dayText   = WhoLightTextLow,      nightText = WhoDarkTextLow,
+    dayBox    = WhoLightBoxLow,       nightBox  = WhoDarkBoxLow,
+    bandName  = "Low",
+)
+private val WHO_BAND_MODERATE = band(
+    dayText   = WhoLightTextModerate, nightText = WhoDarkTextModerate,
+    dayBox    = WhoLightBoxModerate,  nightBox  = WhoDarkBoxModerate,
+    bandName  = "Moderate",
+)
+private val WHO_BAND_HIGH = band(
+    dayText   = WhoLightTextHigh,     nightText = WhoDarkTextHigh,
+    dayBox    = WhoLightBoxHigh,      nightBox  = WhoDarkBoxHigh,
+    bandName  = "High",
+)
+private val WHO_BAND_VERY_HIGH = band(
+    dayText   = WhoLightTextVeryHigh, nightText = WhoDarkTextVeryHigh,
+    dayBox    = WhoLightBoxVeryHigh,  nightBox  = WhoDarkBoxVeryHigh,
+    bandName  = "Very High",
+)
+private val WHO_BAND_EXTREME = band(
+    dayText   = WhoLightTextExtreme,  nightText = WhoDarkTextExtreme,
+    dayBox    = WhoLightBoxExtreme,   nightBox  = WhoDarkBoxExtreme,
+    bandName  = "Extreme",
+)
+
+private fun whoBand(uv: Double): UvBand = when {
+    uv < 3  -> WHO_BAND_LOW
+    uv < 6  -> WHO_BAND_MODERATE
+    uv < 8  -> WHO_BAND_HIGH
+    uv < 11 -> WHO_BAND_VERY_HIGH
+    else    -> WHO_BAND_EXTREME
+}
+
 private fun formatUv(uv: Double): String =
     if (uv == uv.toLong().toDouble()) uv.toLong().toString() else "%.1f".format(uv)
 
-private val SIZE_COMPACT = DpSize(80.dp,  80.dp)
-private val SIZE_FULL    = DpSize(100.dp, 100.dp)
-
 class UvWidget : GlanceAppWidget() {
     override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
-    override val sizeMode = SizeMode.Responsive(setOf(SIZE_COMPACT, SIZE_FULL))
+    override val sizeMode = SizeMode.Single
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
-            val prefs   = currentState<Preferences>()
-            val uvIndex = prefs[WIDGET_KEY_UV_INDEX]
-            val status  = prefs[WIDGET_KEY_STATUS] ?: "OK"
+            val prefs       = currentState<Preferences>()
+            val uvIndex     = prefs[WIDGET_KEY_UV_INDEX]
+            val status      = prefs[WIDGET_KEY_STATUS] ?: "OK"
+            val schemeStr   = prefs[WIDGET_KEY_RISK_SCHEME]
+            val riskScheme  = if (schemeStr == RiskScheme.GLOBAL_SOLAR_UVI.name)
+                RiskScheme.GLOBAL_SOLAR_UVI else RiskScheme.SUNSMART
 
             val isUnavailable = status == "NA"
-            val band          = if (isUnavailable || uvIndex == null) BAND_NONE else uvBand(uvIndex)
-            val numberText    = if (isUnavailable || uvIndex == null) "—" else formatUv(uvIndex)
-            val uvLabel       = if (isUnavailable) "Offline" else "UV Index"
+            val band = when {
+                isUnavailable || uvIndex == null -> BAND_NONE
+                riskScheme == RiskScheme.GLOBAL_SOLAR_UVI -> whoBand(uvIndex)
+                else -> sunSmartBand(uvIndex)
+            }
 
-            val isCompact     = LocalSize.current.width < SIZE_FULL.width
-            val numFontSize   = if (isCompact) 28.sp else 36.sp
-            val labelFontSize = if (isCompact) 8.sp  else 10.sp
+            val numberText = if (isUnavailable || uvIndex == null) "—" else formatUv(uvIndex)
+            val uvLabel = when {
+                isUnavailable -> "Offline"
+                riskScheme == RiskScheme.GLOBAL_SOLAR_UVI && uvIndex != null -> band.bandName
+                else -> "UV Index"
+            }
+            val labelWeight = if (riskScheme == RiskScheme.GLOBAL_SOLAR_UVI && !isUnavailable && uvIndex != null)
+                FontWeight.Medium else FontWeight.Normal
+
+            val numFontSize   = 28.sp
+            val labelFontSize = 8.sp
 
             Column(
                 modifier = GlanceModifier
@@ -144,6 +213,7 @@ class UvWidget : GlanceAppWidget() {
                     style = TextStyle(
                         color = band.label,
                         fontSize = labelFontSize,
+                        fontWeight = labelWeight,
                         textAlign = TextAlign.Center,
                     ),
                 )

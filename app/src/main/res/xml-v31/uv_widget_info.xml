@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    API 31+ override: omits minHeight/minWidth so the Sony Xperia launcher
+    does not double-count them alongside targetCellWidth/Height, which causes
+    a forced 1x2 initial placement on Sony devices.
+-->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:minWidth="40dp"
-    android:minHeight="31dp"
-    android:minResizeWidth="40dp"
-    android:minResizeHeight="40dp"
     android:targetCellWidth="1"
     android:targetCellHeight="1"
+    android:minResizeWidth="40dp"
+    android:minResizeHeight="40dp"
     android:maxResizeWidth="250dp"
     android:maxResizeHeight="250dp"
     android:updatePeriodMillis="0"

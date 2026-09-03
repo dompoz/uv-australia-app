@@ -31,6 +31,7 @@ class UvWidgetWorker(
     override suspend fun doWork(): Result {
         val prefs       = UserPreferences(context)
         val stationCode = prefs.stationCode.first() ?: "syd"
+        val riskScheme  = prefs.riskScheme.first()
 
         val manager  = GlanceAppWidgetManager(context)
         val glanceIds: List<GlanceId> = manager.getGlanceIds(UvWidget::class.java)
@@ -91,6 +92,7 @@ class UvWidgetWorker(
                         }
 
                         set(WIDGET_KEY_CURRENT_MINUTES, currentMinutes)
+                        set(WIDGET_KEY_RISK_SCHEME, riskScheme.name)
                     }
                 }
                 UvWidget().update(context, id)
