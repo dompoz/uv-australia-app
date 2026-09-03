@@ -89,11 +89,16 @@ internal fun MainScreenContent(
     var showDistanceModal by remember { mutableStateOf(false) }
     var showDevMenu by remember { mutableStateOf(false) }
     var showThemePicker by remember { mutableStateOf(false) }
+    var showUvDetail by remember { mutableStateOf(false) }
     var devOverrides by remember { mutableStateOf(initialDevOverrides) }
     var graphExpanded by remember { mutableStateOf(false) }
 
     BackHandler(enabled = graphExpanded) {
         graphExpanded = false
+    }
+
+    BackHandler(enabled = showUvDetail) {
+        showUvDetail = false
     }
 
     Scaffold(
@@ -137,6 +142,7 @@ internal fun MainScreenContent(
                             onShowPicker = { showPicker = true },
                             onShowDevMenu = { showDevMenu = true },
                             onShowThemePicker = { showThemePicker = true },
+                            onShowUvDetail = { showUvDetail = true },
                             modifier = Modifier
                                 .width(topWidth)
                                 .fillMaxHeight(),
@@ -161,6 +167,7 @@ internal fun MainScreenContent(
                             onShowPicker = { showPicker = true },
                             onShowDevMenu = { showDevMenu = true },
                             onShowThemePicker = { showThemePicker = true },
+                            onShowUvDetail = { showUvDetail = true },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(topHeight),
@@ -180,6 +187,15 @@ internal fun MainScreenContent(
                 }
             }
         }
+    }
+
+    val uvDetailIndex = (devOverrides.devUvIndex ?: state.currentUvIndex)
+    if (showUvDetail && uvDetailIndex != null && !state.liveError && state.stationStatus != "NA") {
+        UvDetailModal(
+            uvIndex = uvDetailIndex,
+            riskScheme = state.riskScheme,
+            onDismiss = { showUvDetail = false },
+        )
     }
 
     if (showPicker) {
@@ -328,6 +344,7 @@ private fun TopPane(
     onShowPicker: () -> Unit,
     onShowDevMenu: () -> Unit,
     onShowThemePicker: () -> Unit,
+    onShowUvDetail: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -390,6 +407,7 @@ private fun TopPane(
                     stationStatus = state.stationStatus,
                     riskScheme = state.riskScheme,
                     forceProtectionWarning = devOverrides.forceProtectionWarning,
+                    onTap = onShowUvDetail,
                 )
 
                 Box(

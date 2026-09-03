@@ -1,10 +1,15 @@
 package com.uvaustralia.app.ui.main
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.uvaustralia.app.ui.theme.LocalIsDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,10 +20,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -79,6 +88,7 @@ fun UvIndexDisplay(
     stationStatus: String,
     riskScheme: RiskScheme = RiskScheme.SUNSMART,
     forceProtectionWarning: Boolean = false,
+    onTap: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val showProtectionWarning = forceProtectionWarning ||
@@ -129,10 +139,37 @@ fun UvIndexDisplay(
                         labelFontWeight = FontWeight.Normal
                     }
 
+                    val shouldBounce = index >= PROTECTION_THRESHOLD
+                    val bounceScale = remember(shouldBounce) { Animatable(1.0f) }
+                    LaunchedEffect(shouldBounce) {
+                        if (shouldBounce) {
+                            bounceScale.animateTo(
+                                targetValue = 1.055f,
+                                animationSpec = tween(120, easing = FastOutSlowInEasing),
+                            )
+                            bounceScale.animateTo(
+                                targetValue = 1.0f,
+                                animationSpec = tween(180, easing = FastOutSlowInEasing),
+                            )
+                        } else {
+                            bounceScale.snapTo(1.0f)
+                        }
+                    }
+
+                    val tapModifier = if (onTap != null) {
+                        Modifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onTap,
+                        )
+                    } else Modifier
+
                     SubcomposeLayout(
                         modifier = Modifier
+                            .graphicsLayer { scaleX = bounceScale.value; scaleY = bounceScale.value }
                             .clip(RoundedCornerShape(16.dp))
-                            .background(uvColors.box),
+                            .background(uvColors.box)
+                            .then(tapModifier),
                     ) { _ ->
                         val boxWidthPx = boxWidthDp.roundToPx()
                         val widthConstraints = Constraints(minWidth = boxWidthPx, maxWidth = boxWidthPx)
