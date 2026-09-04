@@ -3,6 +3,11 @@ package com.uvaustralia.app.ui.main
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.rememberScrollableState
+import androidx.compose.foundation.gestures.scrollable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -27,6 +32,11 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults.Indicator
+import androidx.compose.material3.pulltorefresh.PullToRefreshState
+import androidx.compose.material3.pulltorefresh.pullToRefresh
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -71,6 +81,10 @@ fun MainScreen(viewModel: MainViewModel) {
         onLivePollingPaused = { viewModel.setLivePollingPaused(it) },
         onThemeChange = { viewModel.setThemePreference(it) },
         onRiskSchemeChange = { viewModel.setRiskScheme(it) },
+        onUvIndexTapped = { viewModel.onUvIndexTapped() },
+        onGraphTapped = { viewModel.onGraphTapped() },
+        onResetOnboarding = { viewModel.resetOnboarding() },
+        onRefresh = { viewModel.refresh() },
     )
 }
 
@@ -84,6 +98,10 @@ internal fun MainScreenContent(
     onLivePollingPaused: (Boolean) -> Unit = {},
     onThemeChange: (ThemePreference) -> Unit = {},
     onRiskSchemeChange: (RiskScheme) -> Unit = {},
+    onUvIndexTapped: () -> Unit = {},
+    onGraphTapped: () -> Unit = {},
+    onResetOnboarding: () -> Unit = {},
+    onRefresh: () -> Unit = {},
 ) {
     var showPicker by remember { mutableStateOf(false) }
     var showDistanceModal by remember { mutableStateOf(false) }
@@ -135,54 +153,91 @@ internal fun MainScreenContent(
                 )
             } else {
                 if (isLandscape) {
-                    Row(modifier = Modifier.fillMaxSize()) {
-                        TopPane(
-                            state = state,
-                            devOverrides = devOverrides,
-                            onShowPicker = { showPicker = true },
-                            onShowDevMenu = { showDevMenu = true },
-                            onShowThemePicker = { showThemePicker = true },
-                            onShowUvDetail = { showUvDetail = true },
+                    val pullState = rememberPullToRefreshState()
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pullToRefresh(
+                                isRefreshing = state.isRefreshing,
+                                state = pullState,
+                                onRefresh = onRefresh,
+                            ),
+                    ) {
+                        Row(
                             modifier = Modifier
-                                .width(topWidth)
-                                .fillMaxHeight(),
-                        )
-                        BottomPane(
-                            state = state,
-                            paneWidth = paneWidth,
-                            paneHeight = paneHeight,
-                            devOverrides = devOverrides,
-                            onShowDistanceModal = { showDistanceModal = true },
-                            onExpand = { graphExpanded = true },
-                            modifier = Modifier
-                                .width(paneWidth)
-                                .fillMaxHeight(),
+                                .fillMaxSize()
+                                .scrollable(
+                                    state = rememberScrollableState { it },
+                                    orientation = Orientation.Vertical,
+                                ),
+                        ) {
+                            TopPane(
+                                state = state,
+                                devOverrides = devOverrides,
+                                onShowPicker = { showPicker = true },
+                                onShowDevMenu = { showDevMenu = true },
+                                onShowThemePicker = { showThemePicker = true },
+                                onShowUvDetail = { showUvDetail = true },
+                                onUvIndexTapped = onUvIndexTapped,
+                                modifier = Modifier
+                                    .width(topWidth)
+                                    .fillMaxHeight(),
+                            )
+                            BottomPane(
+                                state = state,
+                                paneWidth = paneWidth,
+                                paneHeight = paneHeight,
+                                devOverrides = devOverrides,
+                                onShowDistanceModal = { showDistanceModal = true },
+                                onExpand = { graphExpanded = true },
+                                onGraphTapped = onGraphTapped,
+                                modifier = Modifier
+                                    .width(paneWidth)
+                                    .fillMaxHeight(),
+                            )
+                        }
+                        Indicator(
+                            modifier = Modifier.align(Alignment.TopCenter),
+                            isRefreshing = state.isRefreshing,
+                            state = pullState,
                         )
                     }
                 } else {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        TopPane(
-                            state = state,
-                            devOverrides = devOverrides,
-                            onShowPicker = { showPicker = true },
-                            onShowDevMenu = { showDevMenu = true },
-                            onShowThemePicker = { showThemePicker = true },
-                            onShowUvDetail = { showUvDetail = true },
+                    PullToRefreshBox(
+                        isRefreshing = state.isRefreshing,
+                        onRefresh = onRefresh,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        Column(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(topHeight),
-                        )
-                        BottomPane(
-                            state = state,
-                            paneWidth = paneWidth,
-                            paneHeight = paneHeight,
-                            devOverrides = devOverrides,
-                            onShowDistanceModal = { showDistanceModal = true },
-                            onExpand = { graphExpanded = true },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(paneHeight),
-                        )
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState()),
+                        ) {
+                            TopPane(
+                                state = state,
+                                devOverrides = devOverrides,
+                                onShowPicker = { showPicker = true },
+                                onShowDevMenu = { showDevMenu = true },
+                                onShowThemePicker = { showThemePicker = true },
+                                onShowUvDetail = { showUvDetail = true },
+                                onUvIndexTapped = onUvIndexTapped,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(topHeight),
+                            )
+                            BottomPane(
+                                state = state,
+                                paneWidth = paneWidth,
+                                paneHeight = paneHeight,
+                                devOverrides = devOverrides,
+                                onShowDistanceModal = { showDistanceModal = true },
+                                onExpand = { graphExpanded = true },
+                                onGraphTapped = onGraphTapped,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(paneHeight),
+                            )
+                        }
                     }
                 }
             }
@@ -243,6 +298,7 @@ internal fun MainScreenContent(
                 }
                 devOverrides = new
             },
+            onResetOnboarding = onResetOnboarding,
             onDismiss = { showDevMenu = false },
         )
     }
@@ -345,6 +401,7 @@ private fun TopPane(
     onShowDevMenu: () -> Unit,
     onShowThemePicker: () -> Unit,
     onShowUvDetail: () -> Unit,
+    onUvIndexTapped: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -407,7 +464,11 @@ private fun TopPane(
                     stationStatus = state.stationStatus,
                     riskScheme = state.riskScheme,
                     forceProtectionWarning = devOverrides.forceProtectionWarning,
-                    onTap = onShowUvDetail,
+                    showHint = state.showUvHint,
+                    onTap = {
+                        onUvIndexTapped()
+                        onShowUvDetail()
+                    },
                 )
 
                 Box(
@@ -448,6 +509,7 @@ private fun BottomPane(
     devOverrides: DevOverrides,
     onShowDistanceModal: () -> Unit,
     onExpand: () -> Unit,
+    onGraphTapped: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val warningStripHeight = 32.dp
@@ -468,7 +530,10 @@ private fun BottomPane(
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = onExpand,
+                    onClick = {
+                        onGraphTapped()
+                        onExpand()
+                    },
                 ),
             contentAlignment = Alignment.Center,
         ) {
@@ -483,14 +548,26 @@ private fun BottomPane(
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             } else {
-                UvGraph(
-                    curve = state.curve,
-                    graphHeight = graphHeight,
-                    riskScheme = state.riskScheme,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = hMargin, end = hMargin + 21.dp),
-                )
+                OnboardingHint(
+                    visible = state.showGraphHint,
+                    onTap = {
+                        onGraphTapped()
+                        onExpand()
+                    },
+                    padding = 0.dp,
+                    cornerRadius = 14.dp,
+                    outlineStartInset = hMargin + 21.dp,
+                    outlineEndInset = hMargin + 21.dp,
+                ) {
+                    UvGraph(
+                        curve = state.curve,
+                        graphHeight = graphHeight,
+                        riskScheme = state.riskScheme,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = hMargin, end = hMargin + 21.dp),
+                    )
+                }
             }
         }
 
@@ -552,6 +629,7 @@ private fun DistanceWarning(
 private fun DevMenuDialog(
     overrides: DevOverrides,
     onOverridesChange: (DevOverrides) -> Unit,
+    onResetOnboarding: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     var uvIndexText by remember { mutableStateOf(overrides.devUvIndex?.toString() ?: "") }
@@ -559,7 +637,10 @@ private fun DevMenuDialog(
         onDismissRequest = onDismiss,
         title = { Text("Dev Options") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+            ) {
                 DevToggleRow(
                     label = "Force protection window",
                     checked = overrides.forceProtectionWindow,
@@ -591,6 +672,12 @@ private fun DevMenuDialog(
                     placeholder = { Text("e.g. 8.5") },
                     singleLine = true,
                 )
+                Button(
+                    onClick = onResetOnboarding,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Reset onboarding")
+                }
             }
         },
         confirmButton = {

@@ -1,9 +1,6 @@
 package com.uvaustralia.app.ui.main
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -20,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -88,6 +84,7 @@ fun UvIndexDisplay(
     stationStatus: String,
     riskScheme: RiskScheme = RiskScheme.SUNSMART,
     forceProtectionWarning: Boolean = false,
+    showHint: Boolean = false,
     onTap: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -139,23 +136,6 @@ fun UvIndexDisplay(
                         labelFontWeight = FontWeight.Normal
                     }
 
-                    val shouldBounce = index >= PROTECTION_THRESHOLD
-                    val bounceScale = remember(shouldBounce) { Animatable(1.0f) }
-                    LaunchedEffect(shouldBounce) {
-                        if (shouldBounce) {
-                            bounceScale.animateTo(
-                                targetValue = 1.055f,
-                                animationSpec = tween(120, easing = FastOutSlowInEasing),
-                            )
-                            bounceScale.animateTo(
-                                targetValue = 1.0f,
-                                animationSpec = tween(180, easing = FastOutSlowInEasing),
-                            )
-                        } else {
-                            bounceScale.snapTo(1.0f)
-                        }
-                    }
-
                     val tapModifier = if (onTap != null) {
                         Modifier.clickable(
                             interactionSource = remember { MutableInteractionSource() },
@@ -164,43 +144,49 @@ fun UvIndexDisplay(
                         )
                     } else Modifier
 
-                    SubcomposeLayout(
-                        modifier = Modifier
-                            .graphicsLayer { scaleX = bounceScale.value; scaleY = bounceScale.value }
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(uvColors.box)
-                            .then(tapModifier),
-                    ) { _ ->
-                        val boxWidthPx = boxWidthDp.roundToPx()
-                        val widthConstraints = Constraints(minWidth = boxWidthPx, maxWidth = boxWidthPx)
+                    OnboardingHint(
+                        visible = showHint,
+                        onTap = { onTap?.invoke() },
+                        cornerRadius = 16.dp,
+                        padding = 0.dp,
+                    ) {
+                        SubcomposeLayout(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(uvColors.box)
+                                .then(tapModifier),
+                        ) { _ ->
+                            val boxWidthPx = boxWidthDp.roundToPx()
+                            val widthConstraints = Constraints(minWidth = boxWidthPx, maxWidth = boxWidthPx)
 
-                        val numberPlaceable = subcompose("number") {
-                            Text(
-                                text = formatUv(index),
-                                style = numberStyle,
-                                color = uvColors.text,
-                                textAlign = TextAlign.Center,
-                            )
-                        }[0].measure(widthConstraints)
+                            val numberPlaceable = subcompose("number") {
+                                Text(
+                                    text = formatUv(index),
+                                    style = numberStyle,
+                                    color = uvColors.text,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }[0].measure(widthConstraints)
 
-                        val boxHeight  = numberPlaceable.height
-                        val shiftUpPx  = (boxHeight * 0.045f).roundToInt()
+                            val boxHeight  = numberPlaceable.height
+                            val shiftUpPx  = (boxHeight * 0.045f).roundToInt()
 
-                        val labelPlaceable = subcompose("label") {
-                            Text(
-                                text = labelText,
-                                style = labelStyle.copy(fontWeight = labelFontWeight),
-                                color = labelColor,
-                                textAlign = TextAlign.Center,
-                            )
-                        }[0].measure(widthConstraints)
+                            val labelPlaceable = subcompose("label") {
+                                Text(
+                                    text = labelText,
+                                    style = labelStyle.copy(fontWeight = labelFontWeight),
+                                    color = labelColor,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }[0].measure(widthConstraints)
 
-                        val labelCentreY = (boxHeight * 0.875f).roundToInt()
-                        val labelY = labelCentreY - labelPlaceable.height / 2
+                            val labelCentreY = (boxHeight * 0.875f).roundToInt()
+                            val labelY = labelCentreY - labelPlaceable.height / 2
 
-                        layout(boxWidthPx, boxHeight) {
-                            numberPlaceable.placeRelative(0, -shiftUpPx)
-                            labelPlaceable.placeRelative(0, labelY)
+                            layout(boxWidthPx, boxHeight) {
+                                numberPlaceable.placeRelative(0, -shiftUpPx)
+                                labelPlaceable.placeRelative(0, labelY)
+                            }
                         }
                     }
                 }

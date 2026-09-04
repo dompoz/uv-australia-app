@@ -20,6 +20,9 @@ class UserPreferences(private val context: Context) {
         private val KEY_AUTO_LOCATION = booleanPreferencesKey("auto_location")
         private val KEY_THEME = stringPreferencesKey("theme")
         private val KEY_RISK_SCHEME = stringPreferencesKey("risk_scheme")
+        val KEY_ONBOARDING_UV_TAPPED = booleanPreferencesKey("onboarding_uv_tapped")
+        val KEY_ONBOARDING_GRAPH_TAPPED = booleanPreferencesKey("onboarding_graph_tapped")
+        val KEY_ONBOARDING_FIRST_OPEN_DONE = booleanPreferencesKey("onboarding_first_open_done")
     }
 
     val stationCode: Flow<String?> = context.dataStore.data.map { it[KEY_STATION_CODE] }
@@ -37,6 +40,9 @@ class UserPreferences(private val context: Context) {
             else               -> RiskScheme.SUNSMART
         }
     }
+    val onboardingUvTapped: Flow<Boolean> = context.dataStore.data.map { it[KEY_ONBOARDING_UV_TAPPED] ?: false }
+    val onboardingGraphTapped: Flow<Boolean> = context.dataStore.data.map { it[KEY_ONBOARDING_GRAPH_TAPPED] ?: false }
+    val onboardingFirstOpenDone: Flow<Boolean> = context.dataStore.data.map { it[KEY_ONBOARDING_FIRST_OPEN_DONE] ?: false }
 
     suspend fun saveStation(code: String) {
         context.dataStore.edit { it[KEY_STATION_CODE] = code }
@@ -52,5 +58,25 @@ class UserPreferences(private val context: Context) {
 
     suspend fun saveRiskScheme(scheme: RiskScheme) {
         context.dataStore.edit { it[KEY_RISK_SCHEME] = scheme.name }
+    }
+
+    suspend fun markOnboardingUvTapped() {
+        context.dataStore.edit { it[KEY_ONBOARDING_UV_TAPPED] = true }
+    }
+
+    suspend fun markOnboardingGraphTapped() {
+        context.dataStore.edit { it[KEY_ONBOARDING_GRAPH_TAPPED] = true }
+    }
+
+    suspend fun markOnboardingFirstOpenDone() {
+        context.dataStore.edit { it[KEY_ONBOARDING_FIRST_OPEN_DONE] = true }
+    }
+
+    suspend fun resetOnboarding() {
+        context.dataStore.edit {
+            it.remove(KEY_ONBOARDING_UV_TAPPED)
+            it.remove(KEY_ONBOARDING_GRAPH_TAPPED)
+            it.remove(KEY_ONBOARDING_FIRST_OPEN_DONE)
+        }
     }
 }

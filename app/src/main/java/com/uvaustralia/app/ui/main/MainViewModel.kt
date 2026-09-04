@@ -35,11 +35,14 @@ data class MainUiState(
     val distanceKm: Double? = null,
     val autoLocation: Boolean = true,
     val isLoadingCurve: Boolean = false,
+    val isRefreshing: Boolean = false,
     val liveError: Boolean = false,
     val curveError: Boolean = false,
     val locationPermissionNeeded: Boolean = false,
     val themePreference: ThemePreference = ThemePreference.SYSTEM,
     val riskScheme: RiskScheme = RiskScheme.SUNSMART,
+    val showUvHint: Boolean = false,
+    val showGraphHint: Boolean = false,
 )
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
@@ -59,7 +62,30 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val autoLocation = prefs.autoLocation.first()
             val theme = prefs.themePreference.first()
             val scheme = prefs.riskScheme.first()
-            _uiState.update { it.copy(autoLocation = autoLocation, themePreference = theme, riskScheme = scheme) }
+            val uvTapped = prefs.onboardingUvTapped.first()
+            val graphTapped = prefs.onboardingGraphTapped.first()
+            val firstOpenDone = prefs.onboardingFirstOpenDone.first()
+
+            _uiState.update {
+                it.copy(
+                    autoLocation = autoLocation,
+                    themePreference = theme,
+                    riskScheme = scheme,
+                )
+            }
+
+            if (!uvTapped || !graphTapped) {
+                val delayMs = if (!firstOpenDone) 3_000L else 0L
+                if (!firstOpenDone) prefs.markOnboardingFirstOpenDone()
+                if (delayMs > 0) delay(delayMs)
+                _uiState.update {
+                    it.copy(
+                        showUvHint = !uvTapped,
+                        showGraphHint = !graphTapped,
+                    )
+                }
+            }
+
             if (autoLocation) {
                 resolveLocationAndLoad()
             } else {
@@ -199,6 +225,41 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             prefs.saveRiskScheme(scheme)
             _uiState.update { it.copy(riskScheme = scheme) }
+        }
+    }
+
+    fun onUvIndexTapped() {
+        _uiState.update { it.copy(showUvHint = false) }
+        viewModelScope.launch { prefs.markOnboardingUvTapped() }
+    }
+
+    fun onGraphTapped() {
+        _uiState.update { it.copy(showGraphHint = false) }
+        viewModelScope.launch { prefs.markOnboardingGraphTapped() }
+    }
+
+    fun resetOnboarding() {
+        _uiState.update { it.copy(showUvHint = true, showGraphHint = true) }
+        viewModelScope.launch {
+            prefs.resetOnboarding()
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+            val autoLocation = prefs.autoLocation.first()
+            if (autoLocation) {
+                resolveLocationAndLoad()
+            } else {
+                val station = _uiState.value.station
+                    ?: ALL_STATIONS.find { it.code == prefs.stationCode.first() }
+                    ?: ALL_STATIONS.first()
+                loadForStation(station, null, null)
+            }
+            delay(100)
+            uiState.first { !it.isLoadingCurve }
+            _uiState.update { it.copy(isRefreshing = false) }
         }
     }
 }
