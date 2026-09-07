@@ -462,6 +462,7 @@ private fun TopPane(
                     uvIndex = devOverrides.devUvIndex ?: state.currentUvIndex,
                     isError = state.liveError,
                     stationStatus = state.stationStatus,
+                    connectivityError = state.hasFetched && state.liveError && state.curveError,
                     riskScheme = state.riskScheme,
                     forceProtectionWarning = devOverrides.forceProtectionWarning,
                     showHint = state.showUvHint,

@@ -38,6 +38,7 @@ data class MainUiState(
     val isRefreshing: Boolean = false,
     val liveError: Boolean = false,
     val curveError: Boolean = false,
+    val hasFetched: Boolean = false,
     val locationPermissionNeeded: Boolean = false,
     val themePreference: ThemePreference = ThemePreference.SYSTEM,
     val riskScheme: RiskScheme = RiskScheme.SUNSMART,
@@ -157,10 +158,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                             currentUvIndex = reading?.index,
                             stationStatus = reading?.status ?: "NA",
                             liveError = reading == null,
+                            hasFetched = true,
                         )
                     }
                 }.onFailure {
-                    _uiState.update { it.copy(liveError = true) }
+                    _uiState.update { it.copy(liveError = true, hasFetched = true) }
                 }
             }
         }

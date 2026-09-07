@@ -82,6 +82,7 @@ fun UvIndexDisplay(
     uvIndex: Double?,
     isError: Boolean,
     stationStatus: String,
+    connectivityError: Boolean = false,
     riskScheme: RiskScheme = RiskScheme.SUNSMART,
     forceProtectionWarning: Boolean = false,
     showHint: Boolean = false,
@@ -103,6 +104,26 @@ fun UvIndexDisplay(
             label = "UV index",
         ) { index ->
             when {
+                connectivityError -> {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text(
+                            text = "No data",
+                            style = MaterialTheme.typography.displayMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Can't reach ARPANSA",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
                 isError || stationStatus == "NA" -> {
                     Text(
                         text = "—",
