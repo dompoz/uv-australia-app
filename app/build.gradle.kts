@@ -30,8 +30,8 @@ android {
         applicationId = "com.pinktakhyper.uvaustralia"
         minSdk = 29
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.4"
+        versionCode = 6
+        versionName = "1.5"
     }
 
     buildTypes {
@@ -45,6 +45,22 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        create("debugMinified") {
+            initWith(buildTypes.getByName("debug"))
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            matchingFallbacks += "debug"
+        }
+    }
+
+    sourceSets {
+        getByName("debugMinified") {
+            java.srcDirs("src/debug/java")
+            res.srcDirs("src/debug/res")
         }
     }
 

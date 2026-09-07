@@ -5,6 +5,7 @@
 gradle/wrapper/dists/
 gradle/wrapper/gradle-wrapper.jar
 .gradle/
+bundletool.jar
 
 # IDE
 .idea/
